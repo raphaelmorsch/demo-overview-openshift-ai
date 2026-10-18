@@ -1,0 +1,62 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: resumo-fraude
+  namespace: repositorio
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: quay.io/opendatahub/data-processing:Spark-v4.0.1
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/work-dir/fraude_resumo.py
+  sparkVersion: "4.0.1"
+  restartPolicy:
+    type: Never
+  sparkConf:
+    spark.eventLog.enabled: "true"
+    spark.eventLog.dir: file:///mnt/spark/events
+    spark.eventLog.compress: "true"
+  driver:
+    cores: 1
+    coreLimit: "1"
+    memory: 1536m
+    serviceAccount: spark-operator-spark
+    template:
+      spec:
+        containers:
+          - name: spark-kubernetes-driver
+            volumeMounts:
+              - name: job
+                mountPath: /opt/spark/work-dir
+                readOnly: true
+              - name: spark-data
+                mountPath: /mnt/spark
+        volumes:
+          - name: job
+            configMap:
+              name: fraude-spark-job
+          - name: spark-data
+            persistentVolumeClaim:
+              claimName: spark-history
+  executor:
+    cores: 1
+    instances: 2
+    memory: 1536m
+    template:
+      spec:
+        containers:
+          - name: spark-kubernetes-executor
+            volumeMounts:
+              - name: job
+                mountPath: /opt/spark/work-dir
+                readOnly: true
+              - name: spark-data
+                mountPath: /mnt/spark
+        volumes:
+          - name: job
+            configMap:
+              name: fraude-spark-job
+          - name: spark-data
+            persistentVolumeClaim:
+              claimName: spark-history

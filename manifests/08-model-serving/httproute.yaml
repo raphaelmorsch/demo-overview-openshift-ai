@@ -1,0 +1,24 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fraude-classifier-route
+  namespace: repositorio
+spec:
+  parentRefs:
+    - name: openshift-ai-inference
+      namespace: openshift-ingress
+      sectionName: https
+  hostnames:
+    - inference-gateway.apps.ocp.p9cjv.sandbox2112.opentlc.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+          headers:
+            - name: X-Model
+              type: Exact
+              value: fraude-classifier
+      backendRefs:
+        - name: fraude-classifier-predictor
+          port: 80

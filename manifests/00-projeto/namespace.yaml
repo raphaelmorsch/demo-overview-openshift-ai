@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: repositorio
+  labels:
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/feast: "true"
+  annotations:
+    openshift.io/display-name: Repositório de modelos e dados
+    openshift.io/description: Buckets S3 no AIStor para modelos, dados e artefatos de pipeline.

@@ -1,0 +1,9 @@
+apiVersion: feast.dev/v1
+kind: FeatureStore
+metadata:
+  name: fraude
+  namespace: repositorio
+  labels:
+    feature-store-ui: enabled
+spec:
+  feastProject: fraude

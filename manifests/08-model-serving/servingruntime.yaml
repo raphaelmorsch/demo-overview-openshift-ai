@@ -1,0 +1,42 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: fraude-sklearn
+  namespace: repositorio
+  labels:
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: Classificador de fraude
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/recommended-accelerators: "[]"
+    opendatahub.io/template-display-name: Classificador de fraude
+spec:
+  supportedModelFormats:
+    - name: sklearn
+      version: "1"
+      autoSelect: true
+  protocolVersions: ["v1"]
+  multiModel: false
+  volumes:
+    - name: serve
+      configMap:
+        name: fraude-serve
+        defaultMode: 292
+  containers:
+    - name: kserve-container
+      image: registry.redhat.io/rhoai/odh-workbench-jupyter-datascience-cpu-py312-rhel9@sha256:206018cabeb3389fcfb554cb1850c82e509483a2f98bf963d82031303adaaee5
+      command: ["python", "/opt/serve/serve.py"]
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:
+        requests:
+          cpu: 200m
+          memory: 1Gi
+        limits:
+          cpu: "1"
+          memory: 4Gi
+      volumeMounts:
+        - name: serve
+          mountPath: /opt/serve
+          readOnly: true

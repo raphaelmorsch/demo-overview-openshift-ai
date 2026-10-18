@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: implantar-fraude
+  namespace: repositorio
+rules:
+  - apiGroups: ["serving.kserve.io"]
+    resources: ["inferenceservices"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: implantar-fraude
+  namespace: repositorio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: implantar-fraude
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-runner-dspa
+    namespace: repositorio
+  - kind: ServiceAccount
+    name: fraude
+    namespace: repositorio

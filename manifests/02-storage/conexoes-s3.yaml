@@ -1,0 +1,55 @@
+# Connections S3 do projeto. Substitua as chaves pelos valores do secret
+# aistor-credentials no namespace aistor. Não grave a senha real neste arquivo.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dados
+  namespace: repositorio
+  labels:
+    opendatahub.io/dashboard: "true"
+  annotations:
+    opendatahub.io/connection-type: s3
+    openshift.io/display-name: Dados
+stringData:
+  AWS_ACCESS_KEY_ID: <AISTOR_ACCESS_KEY>
+  AWS_SECRET_ACCESS_KEY: <AISTOR_SECRET_KEY>
+  AWS_S3_ENDPOINT: http://aistor-s3.aistor.svc.cluster.local:9000
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_S3_BUCKET: dados
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: modelos
+  namespace: repositorio
+  labels:
+    opendatahub.io/dashboard: "true"
+  annotations:
+    opendatahub.io/connection-type: s3
+    openshift.io/display-name: Modelos
+stringData:
+  AWS_ACCESS_KEY_ID: <AISTOR_ACCESS_KEY>
+  AWS_SECRET_ACCESS_KEY: <AISTOR_SECRET_KEY>
+  AWS_S3_ENDPOINT: http://aistor-s3.aistor.svc.cluster.local:9000
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_S3_BUCKET: modelos
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pipeline-artifacts
+  namespace: repositorio
+  labels:
+    opendatahub.io/dashboard: "true"
+  annotations:
+    opendatahub.io/connection-type: s3
+    openshift.io/display-name: Artefatos de pipeline
+stringData:
+  AWS_ACCESS_KEY_ID: <AISTOR_ACCESS_KEY>
+  AWS_SECRET_ACCESS_KEY: <AISTOR_SECRET_KEY>
+  AWS_S3_ENDPOINT: http://aistor-s3.aistor.svc.cluster.local:9000
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_S3_BUCKET: pipeline-artifacts
+type: Opaque

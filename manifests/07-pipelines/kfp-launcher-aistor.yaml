@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kfp-launcher-aistor
+  namespace: repositorio
+data:
+  defaultPipelineRoot: s3://pipeline-artifacts/v2/artifacts
+  providers: |
+    s3:
+      default:
+        endpoint: http://aistor-s3.aistor.svc.cluster.local:9000
+        disableSSL: true
+        region: us-east-1
+        credentials:
+          fromEnv: false
+          secretRef:
+            secretName: pipeline-artifacts
+            accessKeyKey: AWS_ACCESS_KEY_ID
+            secretKeyKey: AWS_SECRET_ACCESS_KEY

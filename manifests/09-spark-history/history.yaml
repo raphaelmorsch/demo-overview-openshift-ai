@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spark-history
+  namespace: repositorio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3-csi
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-history-scripts
+  namespace: repositorio
+data:
+  gerar.py: |
+    import csv
+    import random
+    from pathlib import Path
+
+    random.seed(42)
+    data = Path("/mnt/spark/data")
+    data.mkdir(parents=True, exist_ok=True)
+    Path("/mnt/spark/events").mkdir(parents=True, exist_ok=True)
+    originais = [
+        (1001, "cartao", 250.40, 0),
+        (1002, "cartao", 8900.00, 1),
+        (1003, "pix", 40.00, 0),
+        (1004, "cartao", 120.10, 0),
+        (1005, "pix", 15000.00, 1),
+        (1006, "cartao", 75.90, 0),
+        (1007, "cartao", 4300.00, 1),
+        (1008, "pix", 18.50, 0),
+    ]
+    destino = data / "transacoes.csv"
+    with destino.open("w", newline="") as arquivo:
+        writer = csv.writer(arquivo)
+        writer.writerow(["id", "produto", "valor", "fraude"])
+        for linha in originais:
+            writer.writerow(linha)
+        for identificador in range(2000, 82000):
+            produto = random.choice(["cartao", "pix"])
+            valor = round(10 ** random.uniform(1, 4.3), 2)
+            limite = 2500 if produto == "pix" else 4000
+            fraude = 1 if valor >= limite else 0
+            if random.random() < 0.04:
+                fraude = 1 - fraude
+            writer.writerow([identificador, produto, valor, fraude])
+    print(f"CSV_OK linhas={8 + 80000} bytes={destino.stat().st_size}")
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gerar-transacoes-spark
+  namespace: repositorio
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: spark-operator-spark
+      containers:
+        - name: gerar
+          image: quay.io/opendatahub/data-processing:Spark-v4.0.1
+          imagePullPolicy: IfNotPresent
+          command: ["python3", "/opt/job/gerar.py"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: scripts
+              mountPath: /opt/job
+              readOnly: true
+            - name: spark-data
+              mountPath: /mnt/spark
+      volumes:
+        - name: scripts
+          configMap:
+            name: spark-history-scripts
+        - name: spark-data
+          persistentVolumeClaim:
+            claimName: spark-history
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history
+  namespace: repositorio
+  labels:
+    app: spark-history
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-history
+  template:
+    metadata:
+      labels:
+        app: spark-history
+    spec:
+      serviceAccountName: spark-operator-spark
+      containers:
+        - name: history
+          image: quay.io/opendatahub/data-processing:Spark-v4.0.1
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "-c"]
+          args:
+            - mkdir -p /mnt/spark/events /mnt/spark/data && exec /opt/spark/sbin/start-history-server.sh
+          env:
+            - name: SPARK_NO_DAEMONIZE
+              value: "true"
+            - name: SPARK_LOG_DIR
+              value: /tmp
+            - name: SPARK_HISTORY_OPTS
+              value: "-Dspark.history.fs.logDirectory=file:///mnt/spark/events -Dspark.history.ui.port=18080 -Dspark.history.fs.update.interval=5s"
+          ports:
+            - name: http
+              containerPort: 18080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: spark-data
+              mountPath: /mnt/spark
+      volumes:
+        - name: spark-data
+          persistentVolumeClaim:
+            claimName: spark-history
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history
+  namespace: repositorio
+  labels:
+    app: spark-history
+spec:
+  selector:
+    app: spark-history
+  ports:
+    - name: http
+      port: 18080
+      targetPort: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: spark-history
+  namespace: repositorio
+spec:
+  to:
+    kind: Service
+    name: spark-history
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

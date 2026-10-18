@@ -1,0 +1,33 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: dspa
+  namespace: repositorio
+spec:
+  apiServer:
+    deploy: true
+    enableOauth: true
+    enableSamplePipeline: false
+    cacheEnabled: false
+    customKfpLauncherConfigMap: kfp-launcher-aistor
+  database:
+    mariaDB:
+      deploy: true
+      pipelineDBName: mlpipeline
+      username: mlpipeline
+      pvcSize: 10Gi
+  persistenceAgent:
+    deploy: true
+  objectStorage:
+    externalStorage:
+      bucket: pipeline-artifacts
+      host: aistor-s3.aistor.svc.cluster.local
+      port: "9000"
+      scheme: http
+      secure: false
+      region: us-east-1
+      basePath: v2/artifacts
+      s3CredentialsSecret:
+        secretName: pipeline-artifacts
+        accessKey: AWS_ACCESS_KEY_ID
+        secretKey: AWS_SECRET_ACCESS_KEY
